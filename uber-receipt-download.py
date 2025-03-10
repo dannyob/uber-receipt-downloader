@@ -560,8 +560,6 @@ async def main():
     parser.add_argument('--output-dir', type=str, default=DOWNLOAD_DIR, help=f'Directory to save receipts (default: {DOWNLOAD_DIR})')
     parser.add_argument('--cdp-url', type=str, default=CDP_URL, help=f'Chrome DevTools Protocol URL (default: {CDP_URL})')
     parser.add_argument('--all', action='store_true', help='Download all available trips')
-    parser.add_argument('--test', action='store_true', help='Test cost extraction on a specific trip ID')
-    parser.add_argument('--test-trip-id', type=str, default="1003c9ae-bd1c-48eb-b751-e260c336f7fa", help='Trip ID to use for testing (default: a specific trip ID)')
     
     args = parser.parse_args()
     
@@ -574,25 +572,6 @@ async def main():
     
     try:
         await downloader.connect_to_browser()
-        
-        # Special test mode
-        if args.test:
-            test_trip_id = args.test_trip_id
-            print(f"Testing cost extraction on trip ID: {test_trip_id}")
-            
-            # Navigate to the trip page
-            if not downloader.page:
-                downloader.page = await downloader.context.new_page()
-                
-            trip_url = f"https://riders.uber.com/trips/{test_trip_id}"
-            print(f"Navigating to {trip_url}")
-            await downloader.page.goto(trip_url, wait_until='networkidle', timeout=30000)
-            
-            # Extract the cost
-            cost = await downloader.extract_cost(downloader.page)
-            print(f"Extracted cost: {cost}")
-            
-            return
         
         # Process date arguments for normal operation
         start_date = None
