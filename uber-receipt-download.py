@@ -108,7 +108,7 @@ class UberReceiptDownloader:
         
         try:
             # Navigate to trips page
-            trips_url = "https://riders.uber.com/trips"
+            trips_url = "https://riders.uber.com/trips?profile=BUSINESS"
             print(f"Navigating to {trips_url}")
             await self.page.goto(trips_url, wait_until='networkidle', timeout=30000)
             
@@ -438,8 +438,8 @@ class UberReceiptDownloader:
                                     # If date extraction fails, use current date
                                     date_formatted = datetime.now().strftime("%Y-%m-%d")
                                 
-                                # Generate a filename with date, cost and trip ID
-                                filename = f"{date_formatted}-{cost}USD-{trip_id}.pdf"
+                                # Generate a filename with cost, currency, date and trip ID
+                                filename = f"{cost}USD-{date_formatted}-{trip_id}.pdf"
                                 
                                 download_path = os.path.join(self.download_dir, filename)
                                 
