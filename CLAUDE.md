@@ -25,3 +25,12 @@
 - **Variable Naming**: snake_case for variables/functions, PascalCase for classes
 - **String Formatting**: f-strings preferred for string interpolation
 - **Comments**: Use comments to explain complex logic, not obvious operations
+
+## Price Extraction Logic
+- Supports multiple currencies (USD, EUR, GBP, JPY, INR, etc.)
+- Uses JavaScript evaluation to extract prices from page content
+- Three-tier approach prioritizes accuracy:
+  1. Look for "Tag" text followed by currency symbol and number
+  2. Look for currency symbol immediately followed by number
+  3. Fallback to second number found (first is usually distance)
+- Filename format: `{amount}-{YYYY-MM-DD}-{trip_id}.pdf` (no currency code)

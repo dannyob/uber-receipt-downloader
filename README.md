@@ -13,8 +13,10 @@ from the trip details page for the filename.
 
 After some back-and-forth testing with Claude using its access to a test browser,
 we got it working reliably. The script now downloads receipts with filenames in
-a consistent format (YYYY-MM-DD-26.44USD-tripid.pdf), making them easy to
-organize and process for accounting.
+a consistent format (24.06-2025-09-18-tripid.pdf), making them easy to
+organize and process for accounting. It supports multiple currencies (USD, EUR,
+GBP, etc.) and intelligently extracts the actual trip price rather than other
+numeric values like distance.
 
 To use it, you need the Python jack-of-all-trades, `uv`, [installed](https://docs.astral.sh/uv/getting-started/installation/). Run your browser
 with remote debugging enabled (e.g., `chromium --remote-debugging-port=9222`), then
