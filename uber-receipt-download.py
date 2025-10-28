@@ -279,20 +279,15 @@ class UberReceiptDownloader:
             print("Make sure Chrome is running with the --remote-debugging-port=9222 flag")
             raise
 
-    async def _load_more_trips(self, page: Page) -> bool:
-        """Click 'More' button to load additional trips"""
+    async def _load_more_trips(self, page: Page) -> None:
+        """Click 'More' button to load next page of trips (replaces current trips)"""
         more_button_selector = 'button:has-text("More")'
 
-        try:
-            if await page.is_visible(more_button_selector, timeout=5000):
-                print("Found 'More' button, clicking to load additional trips...")
-                await page.click(more_button_selector)
-                await asyncio.sleep(2)  # Wait for loading
-                return True
-        except Exception as e:
-            print(f"Note: Could not find or click 'More' button: {e}")
+        print(f"Clicking 'More' to load next page...")
+        await page.click(more_button_selector)
 
-        return False
+        # Wait for page transition (simple fixed wait, More always works)
+        await asyncio.sleep(3)
 
     async def _filter_trips_by_date(self, trips_with_dates: List[Dict[str, Any]],
                                    start_date: Optional[datetime],
@@ -348,23 +343,46 @@ class UberReceiptDownloader:
             await self.page.wait_for_selector('div[href^="https://riders.uber.com/trips/"]',
                                              state='visible', timeout=10000)
 
-            # Extract initial trips
-            trips_with_dates = await self.extractor.extract_trips_from_page(self.page)
-            print(f"Found {len(trips_with_dates)} trip entries on the first page")
+            # Accumulate trips from multiple pages (clicking More replaces the page)
+            all_trips_accumulated = []
+            max_pages = 100  # Safety limit (More almost always present)
+            page_num = 0
 
-            # Load more trips if available
-            while await self._load_more_trips(self.page):
-                new_trips = await self.extractor.extract_trips_from_page(self.page)
+            # Helper to get oldest trip date from accumulated trips
+            def get_oldest_trip_date(trips):
+                oldest = None
+                for trip in trips:
+                    if trip.get('dateText'):
+                        parsed = self.date_parser.parse_date_text(trip['dateText'])
+                        if parsed and (oldest is None or parsed < oldest):
+                            oldest = parsed
+                return oldest
 
-                if len(new_trips) > len(trips_with_dates):
-                    print(f"Loaded more trips, now found {len(new_trips)} total")
-                    trips_with_dates += new_trips
-                else:
-                    print("No new trips found after clicking 'More', stopping")
-                    break
+            while page_num < max_pages:
+                # Extract trips from current page
+                current_page_trips = await self.extractor.extract_trips_from_page(self.page)
+                print(f"Page {page_num + 1}: Found {len(current_page_trips)} trips")
+
+                # Add current page trips to accumulated list
+                all_trips_accumulated.extend(current_page_trips)
+
+                # Check if we've gone back far enough in time
+                oldest_date = get_oldest_trip_date(all_trips_accumulated)
+                if oldest_date:
+                    print(f"Oldest trip so far: {oldest_date.strftime('%Y-%m-%d')}")
+                    if start_date and oldest_date < start_date:
+                        print(f"Reached trips before start date ({start_date.strftime('%Y-%m-%d')}), stopping")
+                        print(f"Total accumulated: {len(all_trips_accumulated)} trips")
+                        break
+
+                # Load next page (More always works)
+                await self._load_more_trips(self.page)
+                page_num += 1
+
+            print(f"Finished loading {page_num + 1} pages with {len(all_trips_accumulated)} total trips")
 
             # Filter by date
-            unique_trip_ids = await self._filter_trips_by_date(trips_with_dates, start_date, end_date)
+            unique_trip_ids = await self._filter_trips_by_date(all_trips_accumulated, start_date, end_date)
 
             print(f"Selected {len(unique_trip_ids)} trips after date filtering")
             return unique_trip_ids
